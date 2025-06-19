@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gun Shop Roulette</title>
+    <style>
+      body {
+        font-family: "Courier New", monospace;
+        background: linear-gradient(135deg, #2c1810, #1a0f0a);
+        color: #f0e6d2;
+        margin: 0;
+        padding: 20px;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .game-title {
+        font-size: 2.5em;
+        color: #ff6b6b;
+        text-shadow: 2px 2px 4px #000;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      .game-container {
+        max-width: 1200px;
+        width: 100%;
+      }
+
+      .lives-display {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        font-size: 1.2em;
+      }
+
+      .player-lives {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .life {
+        width: 20px;
+        height: 20px;
+        background: #ff4444;
+        border-radius: 50%;
+        display: inline-block;
+      }
+
+      .life.lost {
+        background: #444;
+      }
+
+      .guns-area {
+        display: flex;
+        justify-content: center;
+        gap: 40px;
+        margin: 40px 0;
+        padding: 30px;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 15px;
+        border: 2px solid #666;
+      }
+
+      .gun {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        cursor: pointer;
+        padding: 20px;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        position: relative;
+      }
+
+      .gun:hover:not(.disabled) {
+        background: rgba(255, 255, 255, 0.1);
+        transform: scale(1.05);
+      }
+
+      .gun.disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+
+      .gun.wiggle {
+        animation: wiggle 0.5s ease-in-out;
+      }
+
+      @keyframes wiggle {
+        0%,
+        100% {
+          transform: rotate(0deg);
+        }
+        25% {
+          transform: rotate(-5deg);
+        }
+        75% {
+          transform: rotate(5deg);
+        }
+      }
+
+      .gun-image {
+        width: 80px;
+        height: 60px;
+        background: linear-gradient(45deg, #666, #999);
+        border-radius: 5px;
+        position: relative;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+      }
+
+      .cylinder {
+        display: flex;
+        gap: 3px;
+        margin-top: 10px;
+      }
+
+      .chamber {
+        width: 12px;
+        height: 12px;
+        border: 2px solid #888;
+        border-radius: 50%;
+        background: #333;
+      }
+
+      .cards-area {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 30px;
+      }
+
+      .player-cards {
+        flex: 1;
+      }
+
+      .cards-display {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .card {
+        background: linear-gradient(145deg, #4a4a4a, #2a2a2a);
+        border: 2px solid #666;
+        border-radius: 8px;
+        padding: 15px;
+        min-width: 120px;
+        text-align: center;
+        font-size: 0.9em;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+      }
+
+      .card:hover:not(.disabled) {
+        transform: translateY(-3px);
+        border-color: #ff6b6b;
+        box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+      }
+
+      .card.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .card.selected {
+        border-color: #4ecdc4;
+        background: linear-gradient(145deg, #4ecdc4, #2a9d8f);
+        color: white;
+      }
+
+      .ai-cards {
+        display: flex;
+        gap: 10px;
+      }
+
+      .ai-card {
+        width: 60px;
+        height: 80px;
+        background: linear-gradient(145deg, #8b4513, #5d2f0a);
+        border: 2px solid #666;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+      }
+
+      .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(145deg, #2c1810, #1a0f0a);
+        border: 2px solid #ff6b6b;
+        border-radius: 8px;
+        padding: 15px 20px;
+        color: white;
+        font-size: 1em;
+        z-index: 1000;
+        animation: slideIn 0.3s ease-out;
+        max-width: 300px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+      }
+
+      .notification.player {
+        border-color: #4ecdc4;
+      }
+
+      .notification.ai {
+        border-color: #ff6b6b;
+      }
+
+      .notification.system {
+        border-color: #ffd700;
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      .game-controls {
+        text-align: center;
+        margin: 20px 0;
+      }
+
+      .btn {
+        background: linear-gradient(145deg, #ff6b6b, #d63447);
+        border: none;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1em;
+        transition: all 0.3s ease;
+        margin: 0 10px;
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+      }
+
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .turn-indicator {
+        text-align: center;
+        font-size: 1.3em;
+        margin: 20px 0;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+      }
+
+      .bullets-flying {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 24px;
+        animation: bulletsFall 1s ease-out;
+        pointer-events: none;
+        z-index: 1000;
+      }
+
+      @keyframes bulletsFall {
+        0% {
+          opacity: 1;
+          transform: translate(-50%, -50%) translateY(-20px);
+        }
+        100% {
+          opacity: 0;
+          transform: translate(-50%, -50%) translateY(20px);
+        }
+      }
+
+      .bullet-transfer {
+        position: fixed;
+        font-size: 20px;
+        pointer-events: none;
+        z-index: 1000;
+        animation: transferBullet 1s ease-in-out;
+      }
+
+      @keyframes transferBullet {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+
+      .chamber.highlight {
+        border-color: #ffd700;
+        border-width: 3px;
+        animation: chamberPulse 0.5s ease-in-out;
+      }
+
+      @keyframes chamberPulse {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.2);
+        }
+      }
+
+      .shot-counter {
+        font-size: 0.8em;
+        color: #ffd700;
+        margin-top: 5px;
+      }
+
+      .shoot-button {
+        background: linear-gradient(145deg, #ff4444, #cc0000);
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1em;
+        margin-top: 10px;
+        transition: all 0.3s ease;
+      }
+
+      .shoot-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255, 68, 68, 0.4);
+      }
+
+      .shoot-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .gun.selected {
+        background: rgba(255, 215, 0, 0.2);
+        border: 2px solid #ffd700;
+        transform: scale(1.05);
+      }
+
+      .game-over {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+
+      .game-over-content {
+        background: linear-gradient(145deg, #2c1810, #1a0f0a);
+        border: 3px solid #ff6b6b;
+        border-radius: 15px;
+        padding: 40px;
+        text-align: center;
+        color: white;
+      }
+
+      .game-over h2 {
+        font-size: 2.5em;
+        margin-bottom: 20px;
+        color: #ff6b6b;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="game-title">🎰 GUN SHOP ROULETTE 🎰</div>
+
+    <div class="game-container">
+      <div class="lives-display">
+        <div class="player-lives">
+          <strong>PLAYER:</strong>
+          <div id="player-lives"></div>
+        </div>
+        <div class="player-lives">
+          <strong>AI:</strong>
+          <div id="ai-lives"></div>
+        </div>
+      </div>
+
+      <div class="turn-indicator" id="turn-indicator">Game Starting...</div>
+
+      <div class="guns-area" id="guns-area">
+        <!-- Guns will be generated here -->
+      </div>
+
+      <div class="cards-area">
+        <div class="player-cards">
+          <h3>Your Cards:</h3>
+          <div class="cards-display" id="player-cards"></div>
+        </div>
+        <div class="player-cards">
+          <h3>AI Cards: <span id="ai-card-count">3</span></h3>
+          <div class="ai-cards" id="ai-cards"></div>
+        </div>
+      </div>
+
+      <div class="game-controls">
+        <button class="btn" id="new-game-btn" onclick="initGame()">
+          New Game
+        </button>
+      </div>
+    </div>
+
+    <script>
+      class GunShopRoulette {
+        constructor() {
+          this.playerLives = 3;
+          this.aiLives = 3;
+          this.playerCards = [];
+          this.aiCards = [];
+          this.guns = [
+            {
+              bullets: 1,
+              capacity: 4,
+              id: 0,
+              chambers: [true, false, false, false],
+              shotsFired: 0,
+              currentChamber: 0,
+            },
+            {
+              bullets: 1,
+              capacity: 4,
+              id: 1,
+              chambers: [true, false, false, false],
+              shotsFired: 0,
+              currentChamber: 0,
+            },
+            {
+              bullets: 1,
+              capacity: 4,
+              id: 2,
+              chambers: [true, false, false, false],
+              shotsFired: 0,
+              currentChamber: 0,
+            },
+          ];
+          this.currentPlayer = "player"; // 'player' or 'ai'
+          this.gamePhase = "card-selection"; // 'card-selection', 'gun-selection', 'ai-turn'
+          this.selectedCard = null;
+          this.selectedGun = null;
+          this.gameOver = false;
+          this.cardTypes = [
+            "Add 1 bullet to selected gun",
+            "Add 2 bullets to selected gun",
+            "Add 3 bullets to selected gun",
+            "Remove 1 bullet from gun",
+            "Extend gun capacity by 1",
+          ];
+          this.notificationQueue = [];
+          this.isProcessingNotifications = false;
+        }
+
+        initGame() {
+          this.playerLives = 3;
+          this.aiLives = 3;
+          this.playerCards = [];
+          this.aiCards = [];
+          this.guns = [
+            {
+              bullets: 1,
+              capacity: 4,
+              id: 0,
+              chambers: [true, false, false, false],
+              shotsFired: 0,
+              currentChamber: 0,
+            },
+            {
+              bullets: 1,
+              capacity: 4,
+              id: 1,
+              chambers: [true, false, false, false],
+              shotsFired: 0,
+              currentChamber: 0,
+            },
+            {
+              bullets: 1,
+              capacity: 4,
+              id: 2,
+              chambers: [true, false, false, false],
+              shotsFired: 0,
+              currentChamber: 0,
+            },
+          ];
+          this.currentPlayer = "player";
+          this.gamePhase = "gun-selection";
+          this.selectedCard = null;
+          this.selectedGun = null;
+          this.gameOver = false;
+
+          this.notificationQueue = [];
+          this.isProcessingNotifications = false;
+
+          // Deal initial cards (2 + 1 draw = 3 total)
+          for (let i = 0; i < 3; i++) {
+            this.playerCards.push(this.drawCard());
+            this.aiCards.push(this.drawCard());
+          }
+
+          this.updateDisplay();
+          this.notify(
+            "Game started! Each player has 3 lives and 3 cards. Each gun starts with 1 bullet.",
+            "system"
+          );
+          this.updateTurnIndicator();
+        }
+
+        drawCard() {
+          return this.cardTypes[
+            Math.floor(Math.random() * this.cardTypes.length)
+          ];
+        }
+
+        playCard(cardIndex) {
+          if (
+            this.gamePhase !== "action-choice" ||
+            this.currentPlayer !== "player" ||
+            this.selectedGun === null
+          )
+            return;
+
+          const card = this.playerCards[cardIndex];
+          this.selectedCard = { card, index: cardIndex };
+          this.executeCard(card, "player");
+          this.playerCards.splice(cardIndex, 1);
+
+          // After playing a card, end turn (no gun shooting)
+          setTimeout(() => {
+            this.endTurn();
+          }, 2000);
+        }
+
+        executeCard(card, player) {
+          this.notify(`${player.toUpperCase()} played: ${card}`, player);
+
+          switch (card) {
+            case "Add 1 bullet to selected gun":
+              if (player === "player") {
+                // Player uses the already selected gun
+                this.addBulletsToGun(this.selectedGun, 1, true);
+              } else {
+                const gunId = Math.floor(Math.random() * 3);
+                this.addBulletsToGun(gunId, 1, true);
+              }
+              break;
+
+            case "Add 2 bullets to selected gun":
+              if (player === "player") {
+                this.addBulletsToGun(this.selectedGun, 2, true);
+              } else {
+                const gunId = Math.floor(Math.random() * 3);
+                this.addBulletsToGun(gunId, 2, true);
+              }
+              break;
+
+            case "Add 3 bullets to selected gun":
+              if (player === "player") {
+                this.addBulletsToGun(this.selectedGun, 3, true);
+              } else {
+                const gunId = Math.floor(Math.random() * 3);
+                this.addBulletsToGun(gunId, 3, true);
+              }
+              break;
+
+            case "Remove 1 bullet from gun":
+              if (player === "player") {
+                this.removeBulletFromGun(this.selectedGun);
+              } else {
+                const gunId = Math.floor(Math.random() * 3);
+                this.removeBulletFromGun(gunId);
+              }
+              break;
+
+            case "Extend gun capacity by 1":
+              if (player === "player") {
+                this.extendGunCapacity(this.selectedGun);
+                this.notify(
+                  `Extended Gun ${this.selectedGun + 1} capacity by 1`,
+                  "system"
+                );
+              } else {
+                const gunId = Math.floor(Math.random() * 3);
+                this.extendGunCapacity(gunId);
+                this.notify(
+                  `Extended Gun ${gunId + 1} capacity by 1`,
+                  "system"
+                );
+              }
+              break;
+          }
+        }
+
+        addBulletsToGun(gunId, bullets, showTransfer = false) {
+          const gun = this.guns[gunId];
+          const emptySlots = gun.chambers
+            .map((filled, index) => (filled ? -1 : index))
+            .filter((i) => i >= 0);
+          const bulletsToAdd = Math.min(bullets, emptySlots.length);
+
+          if (bulletsToAdd < bullets) {
+            this.wiggleGun(gunId);
+            this.notify(
+              `Gun ${gunId + 1} is full! Only added ${bulletsToAdd} bullets.`,
+              "system"
+            );
+          } else {
+            this.notify(
+              `Added ${bulletsToAdd} bullets to Gun ${gunId + 1}`,
+              "system"
+            );
+          }
+
+          // Add bullets to random empty chambers with animation
+          const slotsToFill = [];
+          for (let i = 0; i < bulletsToAdd; i++) {
+            const availableSlots = gun.chambers
+              .map((filled, index) => (filled ? -1 : index))
+              .filter((i) => i >= 0);
+            if (availableSlots.length > 0) {
+              const randomSlot =
+                availableSlots[
+                  Math.floor(Math.random() * availableSlots.length)
+                ];
+              gun.chambers[randomSlot] = true;
+              gun.bullets++;
+              slotsToFill.push(randomSlot);
+            }
+          }
+
+          if (showTransfer) {
+            this.showBulletTransfer(gunId, bulletsToAdd);
+          }
+
+          // Show brief animation of which chambers got bullets
+          this.animateBulletLoading(gunId, slotsToFill);
+
+          this.updateDisplay();
+        }
+
+        removeBulletFromGun(gunId) {
+          const gun = this.guns[gunId];
+          const filledChambers = gun.chambers
+            .map((filled, index) => (filled ? index : -1))
+            .filter((i) => i >= 0);
+
+          if (filledChambers.length === 0) {
+            this.notify(`Gun ${gunId + 1} has no bullets to remove!`, "system");
+            return;
+          }
+
+          // Remove one random bullet
+          const randomFilledChamber =
+            filledChambers[Math.floor(Math.random() * filledChambers.length)];
+          gun.chambers[randomFilledChamber] = false;
+          gun.bullets--;
+
+          this.showBulletsFalling(gunId, 1);
+          this.notify(`Removed 1 bullet from Gun ${gunId + 1}`, "system");
+          this.updateDisplay();
+        }
+
+        extendGunCapacity(gunId) {
+          const gun = this.guns[gunId];
+          gun.capacity += 1;
+          gun.chambers.push(false);
+          this.updateDisplay();
+        }
+
+        wiggleGun(gunId) {
+          const gunElement = document.getElementById(`gun-${gunId}`);
+          if (gunElement) {
+            gunElement.classList.add("wiggle");
+            setTimeout(() => {
+              gunElement.classList.remove("wiggle");
+            }, 500);
+          }
+        }
+
+        showBulletsFalling(gunId, count) {
+          const gunElement = document.getElementById(`gun-${gunId}`);
+          if (gunElement) {
+            const bulletsDiv = document.createElement("div");
+            bulletsDiv.className = "bullets-flying";
+            bulletsDiv.textContent = "🔫".repeat(count);
+            gunElement.appendChild(bulletsDiv);
+            setTimeout(() => {
+              if (bulletsDiv.parentNode) {
+                bulletsDiv.remove();
+              }
+            }, 1000);
+          }
+        }
+
+        animateBulletLoading(gunId, chamberIndices) {
+          setTimeout(() => {
+            const gunElement = document.getElementById(`gun-${gunId}`);
+            if (!gunElement) return;
+
+            const chambers = gunElement.querySelectorAll(".chamber");
+
+            // Highlight the chambers that got bullets
+            chamberIndices.forEach((chamberIndex, i) => {
+              setTimeout(() => {
+                if (chambers[chamberIndex]) {
+                  chambers[chamberIndex].classList.add("highlight");
+                  chambers[chamberIndex].style.background = "#ff4444";
+                  chambers[chamberIndex].style.boxShadow = "0 0 8px #ff4444";
+
+                  // Remove highlight after a short time
+                  setTimeout(() => {
+                    chambers[chamberIndex].classList.remove("highlight");
+                    chambers[chamberIndex].style.background = "#333";
+                    chambers[chamberIndex].style.boxShadow = "none";
+                  }, 800);
+                }
+              }, i * 200);
+            });
+          }, 100);
+        }
+
+        showBulletTransfer(gunId, count) {
+          const cardArea = document.querySelector(".player-cards");
+          const gunElement = document.getElementById(`gun-${gunId}`);
+
+          if (!cardArea || !gunElement) return;
+
+          const cardRect = cardArea.getBoundingClientRect();
+          const gunRect = gunElement.getBoundingClientRect();
+
+          for (let i = 0; i < count; i++) {
+            setTimeout(() => {
+              const bullet = document.createElement("div");
+              bullet.className = "bullet-transfer";
+              bullet.textContent = "🔴";
+
+              // Start position (from card area)
+              bullet.style.left = cardRect.left + cardRect.width / 2 + "px";
+              bullet.style.top = cardRect.top + cardRect.height / 2 + "px";
+
+              // Calculate end position (to gun)
+              const deltaX =
+                gunRect.left +
+                gunRect.width / 2 -
+                (cardRect.left + cardRect.width / 2);
+              const deltaY =
+                gunRect.top +
+                gunRect.height / 2 -
+                (cardRect.top + cardRect.height / 2);
+
+              // Animate the position
+              setTimeout(() => {
+                bullet.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+              }, 50);
+
+              document.body.appendChild(bullet);
+
+              setTimeout(() => {
+                if (bullet.parentNode) {
+                  bullet.remove();
+                }
+              }, 1000);
+            }, i * 200);
+          }
+        }
+
+        selectGun(gunId) {
+          if (this.gameOver) return;
+
+          if (
+            this.currentPlayer === "player" &&
+            this.gamePhase === "gun-selection"
+          ) {
+            // Player selects which gun to potentially use this turn
+            this.selectedGun = gunId;
+            this.gamePhase = "action-choice";
+            this.updateDisplay();
+            this.updateTurnIndicator();
+          }
+        }
+
+        shootSelectedGun() {
+          if (
+            this.gamePhase !== "action-choice" ||
+            this.currentPlayer !== "player" ||
+            this.selectedGun === null
+          )
+            return;
+
+          this.shootGun(this.selectedGun, "player");
+          setTimeout(() => {
+            this.endTurnAfterShooting();
+          }, 2000);
+        }
+
+        shootGun(gunId, player) {
+          const gun = this.guns[gunId];
+          const currentChamber = gun.currentChamber;
+          const isHit = gun.chambers[currentChamber];
+
+          gun.shotsFired++;
+
+          if (isHit) {
+            if (player === "player") {
+              this.playerLives--;
+              this.notify(
+                `💥 BANG! You shot Gun ${gunId + 1} and lost 1 life! (${
+                  this.playerLives
+                } lives remaining)`,
+                "system"
+              );
+            } else {
+              this.aiLives--;
+              this.notify(
+                `💥 BANG! AI shot Gun ${gunId + 1} and lost 1 life! (${
+                  this.aiLives
+                } lives remaining)`,
+                "system"
+              );
+            }
+            gun.chambers[currentChamber] = false; // Remove the bullet that fired
+            gun.bullets--;
+          } else {
+            this.notify(
+              `🔫 ${player.toUpperCase()} shot Gun ${
+                gunId + 1
+              } - Empty chamber! Safe!`,
+              player
+            );
+          }
+
+          // Move to next chamber
+          gun.currentChamber = (gun.currentChamber + 1) % gun.capacity;
+
+          this.updateDisplay();
+
+          if (this.playerLives <= 0 || this.aiLives <= 0) {
+            setTimeout(() => this.endGame(), 1000);
+          }
+        }
+
+        endTurn() {
+          // Reset selections and switch to other player
+          this.selectedGun = null;
+          if (this.currentPlayer === "player") {
+            this.currentPlayer = "ai";
+            this.gamePhase = "ai-turn";
+            setTimeout(() => this.aiTurn(), 1000);
+          } else {
+            this.currentPlayer = "player";
+            this.gamePhase = "gun-selection";
+          }
+          this.updateDisplay();
+          this.updateTurnIndicator();
+        }
+
+        endTurnAfterShooting() {
+          // Draw a card after shooting, reset selections, then switch players
+          this.selectedGun = null;
+          if (this.currentPlayer === "player") {
+            this.playerCards.push(this.drawCard());
+            this.currentPlayer = "ai";
+            this.gamePhase = "ai-turn";
+            setTimeout(() => this.aiTurn(), 1000);
+          } else {
+            this.aiCards.push(this.drawCard());
+            this.currentPlayer = "player";
+            this.gamePhase = "gun-selection";
+          }
+          this.updateDisplay();
+          this.updateTurnIndicator();
+        }
+
+        aiTurn() {
+          if (this.gameOver) return;
+
+          // AI first selects a gun
+          const selectedGun = Math.floor(Math.random() * 3);
+
+          setTimeout(() => {
+            // AI randomly chooses to play card or shoot
+            const playCard = Math.random() < 0.5;
+
+            if (playCard && this.aiCards.length > 0) {
+              // AI plays a random card
+              const cardIndex = Math.floor(Math.random() * this.aiCards.length);
+              const card = this.aiCards[cardIndex];
+
+              // Execute card and create combined notification
+              this.executeCardForAI(card, selectedGun);
+              this.aiCards.splice(cardIndex, 1);
+
+              // Wait for card effects to complete before ending turn
+              setTimeout(() => {
+                this.endTurn();
+              }, 1000);
+            } else {
+              // AI shoots the selected gun
+              this.shootGunForAI(selectedGun);
+              setTimeout(() => {
+                this.endTurnAfterShooting();
+              }, 2000);
+            }
+          }, 1000);
+        }
+
+        executeCardForAI(card, gunId) {
+          let message = `AI selected Gun ${gunId + 1} and `;
+
+          switch (card) {
+            case "Add 1 bullet to selected gun":
+              this.addBulletsToGunSilent(gunId, 1, true);
+              message += "added 1 bullet to it";
+              break;
+
+            case "Add 2 bullets to selected gun":
+              const added2 = this.addBulletsToGunSilent(gunId, 2, true);
+              message += `added ${added2} bullets to it`;
+              if (added2 < 2) message += " (gun was nearly full)";
+              break;
+
+            case "Add 3 bullets to selected gun":
+              const added3 = this.addBulletsToGunSilent(gunId, 3, true);
+              message += `added ${added3} bullets to it`;
+              if (added3 < 3) message += " (gun was nearly full)";
+              break;
+
+            case "Remove 1 bullet from gun":
+              const removed = this.removeBulletFromGunSilent(gunId);
+              if (removed) {
+                message += "removed 1 bullet from it";
+              } else {
+                message += "tried to remove a bullet but it was empty";
+              }
+              break;
+
+            case "Extend gun capacity by 1":
+              this.extendGunCapacity(gunId);
+              message += "extended its capacity by 1";
+              break;
+          }
+
+          this.notify(message, "ai");
+        }
+
+        shootGunForAI(gunId) {
+          const gun = this.guns[gunId];
+          const currentChamber = gun.currentChamber;
+          const isHit = gun.chambers[currentChamber];
+
+          gun.shotsFired++;
+
+          let message = `AI selected Gun ${gunId + 1} and shot it - `;
+
+          if (isHit) {
+            this.aiLives--;
+            message += `💥 BANG! AI lost 1 life! (${this.aiLives} lives remaining)`;
+            gun.chambers[currentChamber] = false; // Remove the bullet that fired
+            gun.bullets--;
+          } else {
+            message += "🔫 MISS! Nothing but air, AI is safe!";
+          }
+
+          this.notify(message, "ai");
+
+          // Move to next chamber
+          gun.currentChamber = (gun.currentChamber + 1) % gun.capacity;
+          this.updateDisplay();
+
+          if (this.aiLives <= 0) {
+            setTimeout(() => this.endGame(), 1000);
+          }
+        }
+
+        addBulletsToGunSilent(gunId, bullets, showTransfer = false) {
+          const gun = this.guns[gunId];
+          const emptySlots = gun.chambers
+            .map((filled, index) => (filled ? -1 : index))
+            .filter((i) => i >= 0);
+          const bulletsToAdd = Math.min(bullets, emptySlots.length);
+
+          if (bulletsToAdd > 0) {
+            // Add bullets to random empty chambers with animation
+            const slotsToFill = [];
+            for (let i = 0; i < bulletsToAdd; i++) {
+              const availableSlots = gun.chambers
+                .map((filled, index) => (filled ? -1 : index))
+                .filter((i) => i >= 0);
+              if (availableSlots.length > 0) {
+                const randomSlot =
+                  availableSlots[
+                    Math.floor(Math.random() * availableSlots.length)
+                  ];
+                gun.chambers[randomSlot] = true;
+                gun.bullets++;
+                slotsToFill.push(randomSlot);
+              }
+            }
+
+            if (showTransfer) {
+              this.showBulletTransfer(gunId, bulletsToAdd);
+            }
+
+            // Show brief animation of which chambers got bullets
+            this.animateBulletLoading(gunId, slotsToFill);
+          }
+
+          this.updateDisplay();
+          return bulletsToAdd;
+        }
+
+        removeBulletFromGunSilent(gunId) {
+          const gun = this.guns[gunId];
+          const filledChambers = gun.chambers
+            .map((filled, index) => (filled ? index : -1))
+            .filter((i) => i >= 0);
+
+          if (filledChambers.length === 0) {
+            this.updateDisplay();
+            return false;
+          }
+
+          // Remove one random bullet
+          const randomFilledChamber =
+            filledChambers[Math.floor(Math.random() * filledChambers.length)];
+          gun.chambers[randomFilledChamber] = false;
+          gun.bullets--;
+
+          this.showBulletsFalling(gunId, 1);
+          this.updateDisplay();
+          return true;
+        }
+
+        endGame() {
+          this.gameOver = true;
+          const winner = this.playerLives > 0 ? "PLAYER" : "AI";
+          this.notify(`🎉 GAME OVER! ${winner} WINS!`, "system");
+
+          setTimeout(() => {
+            const gameOverDiv = document.createElement("div");
+            gameOverDiv.className = "game-over";
+            gameOverDiv.innerHTML = `
+                        <div class="game-over-content">
+                            <h2>${winner} WINS!</h2>
+                            <p>${
+                              winner === "PLAYER"
+                                ? "Congratulations! You survived the roulette!"
+                                : "The AI outlasted you this time..."
+                            }</p>
+                            <button class="btn" onclick="initGame(); this.parentElement.parentElement.remove();">Play Again</button>
+                        </div>
+                    `;
+            document.body.appendChild(gameOverDiv);
+          }, 2000);
+        }
+
+        updateTurnIndicator() {
+          const indicator = document.getElementById("turn-indicator");
+          if (this.gameOver) {
+            indicator.textContent = "Game Over";
+          } else if (this.currentPlayer === "player") {
+            if (this.gamePhase === "gun-selection") {
+              indicator.textContent = "Your Turn: Select a gun first";
+            } else if (this.gamePhase === "action-choice") {
+              indicator.textContent = `Gun ${
+                this.selectedGun + 1
+              } selected: Play a card OR shoot this gun`;
+            }
+          } else {
+            indicator.textContent = "AI Turn: Thinking...";
+          }
+        }
+
+        updateDisplay() {
+          this.updateLives();
+          this.updateGuns();
+          this.updateCards();
+        }
+
+        updateLives() {
+          const playerLivesDiv = document.getElementById("player-lives");
+          const aiLivesDiv = document.getElementById("ai-lives");
+
+          if (playerLivesDiv) {
+            playerLivesDiv.innerHTML = "";
+            for (let i = 0; i < 3; i++) {
+              const life = document.createElement("div");
+              life.className = `life ${i >= this.playerLives ? "lost" : ""}`;
+              playerLivesDiv.appendChild(life);
+            }
+          }
+
+          if (aiLivesDiv) {
+            aiLivesDiv.innerHTML = "";
+            for (let i = 0; i < 3; i++) {
+              const aiLife = document.createElement("div");
+              aiLife.className = `life ${i >= this.aiLives ? "lost" : ""}`;
+              aiLivesDiv.appendChild(aiLife);
+            }
+          }
+        }
+
+        updateGuns() {
+          const gunsArea = document.getElementById("guns-area");
+          if (!gunsArea) return;
+
+          gunsArea.innerHTML = "";
+
+          this.guns.forEach((gun, index) => {
+            const gunDiv = document.createElement("div");
+            gunDiv.className = "gun";
+            gunDiv.id = `gun-${index}`;
+
+            // Add selected styling
+            if (this.selectedGun === index) {
+              gunDiv.classList.add("selected");
+            }
+
+            if (
+              this.gamePhase === "gun-selection" &&
+              this.currentPlayer === "player" &&
+              !this.gameOver
+            ) {
+              gunDiv.addEventListener("click", () => this.selectGun(index));
+            } else {
+              gunDiv.classList.add("disabled");
+            }
+
+            // Build cylinder chambers - show next chamber but not bullet positions
+            const chambers = gun.chambers
+              .map((filled, chamberIndex) => {
+                const isNext = chamberIndex === gun.currentChamber;
+                return `<div class="chamber" style="${
+                  isNext ? "border-color: #ffd700; border-width: 3px;" : ""
+                }"></div>`;
+              })
+              .join("");
+
+            gunDiv.innerHTML = `
+                        <div class="gun-image">🔫</div>
+                        <div>Gun ${index + 1}</div>
+                        <div class="cylinder">
+                            ${chambers}
+                        </div>
+                        <div>Capacity: ${gun.capacity}</div>
+                        <div class="shot-counter">Shots Fired: ${
+                          gun.shotsFired
+                        }</div>
+                    `;
+
+            gunsArea.appendChild(gunDiv);
+          });
+        }
+
+        updateCards() {
+          const playerCardsDiv = document.getElementById("player-cards");
+          if (!playerCardsDiv) return;
+
+          playerCardsDiv.innerHTML = "";
+
+          this.playerCards.forEach((card, index) => {
+            const cardDiv = document.createElement("div");
+            cardDiv.className = "card";
+            cardDiv.textContent = card;
+
+            if (
+              this.gamePhase === "action-choice" &&
+              this.currentPlayer === "player" &&
+              !this.gameOver
+            ) {
+              cardDiv.addEventListener("click", () => this.playCard(index));
+            } else {
+              cardDiv.classList.add("disabled");
+            }
+
+            playerCardsDiv.appendChild(cardDiv);
+          });
+
+          // Add shoot button if player has selected a gun
+          if (
+            this.gamePhase === "action-choice" &&
+            this.currentPlayer === "player" &&
+            this.selectedGun !== null
+          ) {
+            const shootDiv = document.createElement("div");
+            shootDiv.style.marginTop = "15px";
+
+            const shootButton = document.createElement("button");
+            shootButton.className = "shoot-button";
+            shootButton.textContent = `🔫 SHOOT GUN ${this.selectedGun + 1}`;
+            shootButton.addEventListener("click", () =>
+              this.shootSelectedGun()
+            );
+
+            shootDiv.appendChild(shootButton);
+            playerCardsDiv.appendChild(shootDiv);
+          }
+
+          const aiCardsDiv = document.getElementById("ai-cards");
+          const aiCardCount = document.getElementById("ai-card-count");
+
+          if (aiCardsDiv) {
+            aiCardsDiv.innerHTML = "";
+            for (let i = 0; i < this.aiCards.length; i++) {
+              const cardDiv = document.createElement("div");
+              cardDiv.className = "ai-card";
+              cardDiv.textContent = "🎴";
+              aiCardsDiv.appendChild(cardDiv);
+            }
+          }
+
+          if (aiCardCount) {
+            aiCardCount.textContent = this.aiCards.length;
+          }
+        }
+
+        notify(message, type) {
+          this.notificationQueue.push({ message, type });
+          this.processNotificationQueue();
+        }
+
+        processNotificationQueue() {
+          if (
+            this.isProcessingNotifications ||
+            this.notificationQueue.length === 0
+          ) {
+            return;
+          }
+
+          this.isProcessingNotifications = true;
+          const { message, type } = this.notificationQueue.shift();
+
+          const notification = document.createElement("div");
+          notification.className = `notification ${type}`;
+          notification.textContent = message;
+
+          document.body.appendChild(notification);
+
+          // Auto-remove after 4 seconds, then process next notification
+          setTimeout(() => {
+            if (notification.parentNode) {
+              notification.style.animation = "slideIn 0.3s ease-out reverse";
+              setTimeout(() => {
+                notification.remove();
+                this.isProcessingNotifications = false;
+                // Process next notification in queue after a brief pause
+                setTimeout(() => {
+                  this.processNotificationQueue();
+                }, 500);
+              }, 300);
+            } else {
+              this.isProcessingNotifications = false;
+              setTimeout(() => {
+                this.processNotificationQueue();
+              }, 500);
+            }
+          }, 2000);
+        }
+      }
+
+      let game = new GunShopRoulette();
+
+      function initGame() {
+        // Clear any existing game over modal
+        const existingGameOver = document.querySelector(".game-over");
+        if (existingGameOver) {
+          existingGameOver.remove();
+        }
+
+        game = new GunShopRoulette();
+        game.initGame();
+      }
+
+      // Start the game
+      initGame();
+    </script>
+  </body>
+</html>
